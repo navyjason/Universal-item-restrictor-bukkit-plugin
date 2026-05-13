@@ -45,11 +45,11 @@ public class UIRCommand implements CommandExecutor, TabCompleter {
 
     private final ItemLimiterPlugin plugin;
     private final ItemManager itemManager;
-    private final itemLimitGUI itemLimitGUI;
+    private final ItemLimitGUI itemLimitGUI;
 
     public UIRCommand(ItemLimiterPlugin plugin,
                       ItemManager itemManager,
-                      itemLimitGUI itemLimitGUI) {
+                      ItemLimitGUI itemLimitGUI) {
         this.plugin         = plugin;
         this.itemManager    = itemManager;
         this.itemLimitGUI   = itemLimitGUI;

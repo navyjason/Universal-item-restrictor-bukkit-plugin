@@ -1,6 +1,6 @@
 name: UIR
 version: ${project.version}
-main: main: com.itemlimiter.ItemLimiterPlugin
+main: com.itemlimiter.ItemLimiterPlugin
 api-version: 1.20
 description: Restrict and limit items on your Bukkit server.
 authors: [ YourName ]
