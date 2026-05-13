@@ -1,0 +1,21 @@
+name: UIR
+version: ${project.version}
+main: main: com.itemlimiter.ItemLimiterPlugin
+api-version: 1.20
+description: Restrict and limit items on your Bukkit server.
+authors: [ YourName ]
+
+commands:
+  uitem:
+    description: Main UIR management command.
+    usage: /<command> <restrict|unrestrict|limit|removelimit|list|listlimit|reload|gui> [args]
+    aliases: [ ui ]
+    permission: uir.admin
+
+permissions:
+  uir.admin:
+    description: Access to all UIR management commands.
+    default: op
+  uir.bypass:
+    description: Bypass all item restrictions and limits (useful for admins testing).
+    default: false

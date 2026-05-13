@@ -1,0 +1,43 @@
+# -------------------------------------------------------
+#  UIR – Configuration
+# -------------------------------------------------------
+#
+#  restricted-items:
+#    List of NamespacedKey strings for items that cannot be used.
+#    Format:  namespace:item_id
+#    Vanilla: minecraft:netherite_sword
+#    Modded:  mymod:overpowered_sword
+#
+#  Restrictions applied to restricted items:
+#    - Cannot be used as a crafting ingredient.
+#    - Combat damage is capped to bare-hand level (1.0).
+#    - Cannot be equipped in armour slots.
+#    - Tool interactions (till, path, strip) are blocked.
+#    - Block-breaking is cancelled (player must use bare hand).
+#
+#  Items CAN still be held in inventory and picked up.
+#
+#  limited-items:
+#    Mapping of item keys to max quantities in player inventory.
+#    When a player picks up an item they've hit the limit for, 
+#    they are notified and the item is not picked up.
+#
+# -------------------------------------------------------
+
+restricted-items: []
+
+limited-items: {}
+
+messages:
+  # %item% is replaced with the item's NamespacedKey
+  # %limit% is replaced with the max quantity for limited items
+  cannot-use-tool:    "&cYou cannot use &e%item% &cas a tool!"
+  cannot-craft:       "&cYou cannot use &e%item% &cin crafting!"
+  cannot-equip:       "&cYou cannot equip &e%item%!"
+  limit-exceeded:     "&cYou have reached the limit for &e%item%&c! (Max: %limit%)"
+
+settings:
+  # Show an action-bar / chat message when a player tries to use a restricted item.
+  notify-player: true
+  # Minimum seconds between repeated notifications for the same player (anti-spam).
+  notify-cooldown-seconds: 3
