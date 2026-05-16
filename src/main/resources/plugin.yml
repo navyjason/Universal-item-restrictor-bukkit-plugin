@@ -4,6 +4,7 @@ main: com.itemlimiter.ItemLimiterPlugin
 api-version: 1.20
 description: Restrict and limit items on your Bukkit server.
 authors: [ YourName ]
+softdepend: [ CuriosAPI, Curios ]
 
 commands:
   uitem:

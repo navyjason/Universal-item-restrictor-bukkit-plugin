@@ -3,6 +3,7 @@ package com.itemlimiter;
 import com.itemlimiter.commands.UIRCommand;
 import com.itemlimiter.gui.ItemLimitGUI;
 import com.itemlimiter.listeners.ArmorListener;
+import com.itemlimiter.listeners.InventoryLimitListener;
 import com.itemlimiter.listeners.CombatListener;
 import com.itemlimiter.listeners.CraftingListener;
 import com.itemlimiter.listeners.ToolListener;
@@ -41,6 +42,8 @@ public class ItemLimiterPlugin extends JavaPlugin {
                 new ToolListener(this, itemManager, notificationManager), this);
         getServer().getPluginManager().registerEvents(
                 new LimitListener(this, itemManager, notificationManager), this);
+        getServer().getPluginManager().registerEvents(
+                new InventoryLimitListener(this, itemManager, notificationManager), this);
         // Commands
         UIRCommand cmd = new UIRCommand(this, itemManager, itemLimitGUI);
         getCommand("uitem").setExecutor(cmd);

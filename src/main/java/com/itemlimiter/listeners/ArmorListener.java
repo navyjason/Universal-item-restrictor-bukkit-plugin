@@ -3,12 +3,16 @@ package com.itemlimiter.listeners;
 import com.itemlimiter.ItemLimiterPlugin;
 import com.itemlimiter.managers.ItemManager;
 import com.itemlimiter.managers.NotificationManager;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -31,12 +35,13 @@ import org.bukkit.inventory.PlayerInventory;
  */
 public class ArmorListener implements Listener {
 
-    // Raw slot indices in the PlayerInventory view.
-    // (These are the INVENTORY raw slots, not the InventoryView raw slots.)
-    private static final int HELMET_SLOT     = 39;
-    private static final int CHESTPLATE_SLOT = 38;
-    private static final int LEGGINGS_SLOT   = 37;
-    private static final int BOOTS_SLOT      = 36;
+    // Raw slot indices as reported by InventoryView / InventoryClickEvent.getRawSlot()
+    // for the player's survival inventory (InventoryType.CRAFTING).
+    // Layout: result(0), crafting(1-4), armor(5-8), main(9-35), hotbar(36-44), offhand(45)
+    private static final int HELMET_SLOT     = 5;
+    private static final int CHESTPLATE_SLOT = 6;
+    private static final int LEGGINGS_SLOT   = 7;
+    private static final int BOOTS_SLOT      = 8;
 
     private final ItemLimiterPlugin plugin;
     private final ItemManager itemManager;
@@ -83,6 +88,66 @@ public class ArmorListener implements Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onPlayerInteract(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+        if (hasBypass(player)) return;
+        Action action = event.getAction();
+        if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) return;
+
+        ItemStack item = event.getItem();
+        // Some right-click-in-air interactions supply null; check the player's hands
+        if (item == null || item.getType().isAir()) {
+            ItemStack main = player.getInventory().getItemInMainHand();
+            ItemStack off = player.getInventory().getItemInOffHand();
+            try {
+                if (event.getHand() == EquipmentSlot.OFF_HAND) item = off; else item = main;
+            } catch (Exception e) {
+                item = (main != null && !main.getType().isAir()) ? main : off;
+            }
+        }
+        if (item == null || item.getType().isAir()) return;
+        if (!itemManager.isRestricted(item)) return;
+
+        // Block the equip action and notify
+        event.setCancelled(true);
+        notificationManager.sendCannotEquip(player, item);
+
+        // Immediately remove any restricted armour that may have been equipped
+        PlayerInventory invNow = player.getInventory();
+        ItemStack[] armourNow = invNow.getArmorContents();
+        boolean changedNow = false;
+        for (int i = 0; i < armourNow.length; i++) {
+            if (armourNow[i] != null && itemManager.isRestricted(armourNow[i])) {
+                java.util.Map<Integer, ItemStack> leftover = invNow.addItem(armourNow[i].clone());
+                for (ItemStack drop : leftover.values()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), drop);
+                }
+                armourNow[i] = null;
+                changedNow = true;
+            }
+        }
+        if (changedNow) invNow.setArmorContents(armourNow);
+
+        // Remove restricted armour on next tick in case it slipped through
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            PlayerInventory inv2 = player.getInventory();
+            ItemStack[] armour2 = inv2.getArmorContents();
+            boolean changed2 = false;
+            for (int i = 0; i < armour2.length; i++) {
+                if (armour2[i] != null && itemManager.isRestricted(armour2[i])) {
+                    java.util.Map<Integer, ItemStack> leftover = inv2.addItem(armour2[i].clone());
+                    for (ItemStack drop : leftover.values()) {
+                        player.getWorld().dropItemNaturally(player.getLocation(), drop);
+                    }
+                    armour2[i] = null;
+                    changed2 = true;
+                }
+            }
+            if (changed2) inv2.setArmorContents(armour2);
+        });
+    }
+
     // ── InventoryClickEvent ───────────────────────────────────────────────────
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -90,13 +155,17 @@ public class ArmorListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (hasBypass(player)) return;
 
+        // SlotType.ARMOR covers all vanilla armour slots regardless of which
+        // container the player currently has open, making this reliable without
+        // hardcoding view-specific raw slot numbers for the click cases.
+        boolean clickedArmorSlot = event.getSlotType() == InventoryType.SlotType.ARMOR;
         int rawSlot = event.getRawSlot();
 
         switch (event.getAction()) {
 
-            // Player explicitly places cursor item into a slot
+            // Player explicitly places cursor item into an armour slot
             case PLACE_ALL, PLACE_ONE, PLACE_SOME, SWAP_WITH_CURSOR -> {
-                if (isArmorSlot(rawSlot)) {
+                if (clickedArmorSlot) {
                     ItemStack cursor = event.getCursor();
                     if (cursor != null && itemManager.isRestricted(cursor)) {
                         event.setCancelled(true);
@@ -117,7 +186,7 @@ public class ArmorListener implements Listener {
 
             // Hotkey (1–9) swap while hovering an armour slot
             case HOTBAR_SWAP, HOTBAR_MOVE_AND_READD -> {
-                if (isArmorSlot(rawSlot)) {
+                if (clickedArmorSlot) {
                     ItemStack hotbarItem = getHotbarItem(player, event.getHotbarButton());
                     if (hotbarItem != null && itemManager.isRestricted(hotbarItem)) {
                         event.setCancelled(true);

@@ -249,7 +249,7 @@ public class UIRCommand implements CommandExecutor, TabCompleter {
         if (!sender.hasPermission(PERM)) return List.of();
 
         if (args.length == 1) {
-            List<String> subs = Arrays.asList("restrict", "unrestrict", "limit", "removelimit", 
+            List<String> subs = Arrays.asList("restrict", "unrestrict", "limit", "removelimit",
                                              "list", "listlimit", "reload", "gui");
             return subs.stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
@@ -257,23 +257,39 @@ public class UIRCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 2) {
-            // For unrestrict and removelimit, suggest existing items
-            if (args[0].equalsIgnoreCase("unrestrict")) {
-                String partial = args[1].toLowerCase();
-                return itemManager.getRestrictedItems().stream()
-                        .filter(k -> k.startsWith(partial))
-                        .sorted()
-                        .collect(Collectors.toList());
-            }
-            if (args[0].equalsIgnoreCase("removelimit")) {
-                String partial = args[1].toLowerCase();
-                return itemManager.getLimitedItems().keySet().stream()
-                        .filter(k -> k.startsWith(partial))
-                        .sorted()
-                        .collect(Collectors.toList());
+            String sub     = args[0].toLowerCase();
+            String partial = args[1].toLowerCase();
+
+            switch (sub) {
+                // Suggest all registered item keys from the restricted list
+                case "unrestrict" -> {
+                    return itemManager.getRestrictedItems().stream()
+                            .filter(k -> k.startsWith(partial))
+                            .sorted()
+                            .collect(Collectors.toList());
+                }
+                // Suggest all registered item keys from the limited list
+                case "removelimit" -> {
+                    return itemManager.getLimitedItems().keySet().stream()
+                            .filter(k -> k.startsWith(partial))
+                            .sorted()
+                            .collect(Collectors.toList());
+                }
+                // For restrict and limit, suggest every valid item Material key,
+                // mirroring the behaviour of /give. We use Material.values() so
+                // modded materials registered on hybrid servers also appear.
+                case "restrict", "limit" -> {
+                    return Arrays.stream(org.bukkit.Material.values())
+                            .filter(m -> m.isItem() && !m.isAir())
+                            .map(m -> m.getKey().toString())
+                            .filter(k -> k.startsWith(partial))
+                            .sorted()
+                            .collect(Collectors.toList());
+                }
             }
         }
 
+        // /uitem limit <key> <qty> – no useful autocomplete for the number arg
         return new ArrayList<>();
     }
 
